@@ -1,4 +1,4 @@
-# Log Aggregation for Spring boot application using ELK Stack , Beats and Log4j
+# Log Aggregation for Spring boot application using EFK Stack 
 
 Sample Springboot Application demonstrating Log Aggregation using EFK Stack and Log4j. 
 
