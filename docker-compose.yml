@@ -1,0 +1,91 @@
+version: '3.3'
+
+services:
+
+  app:
+    build: .
+    container_name: spring-boot-efk-service
+    ports:
+      - "12001:12001"
+    restart: unless-stopped 
+    networks:
+      - elk
+    depends_on:
+      - fluentd
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        tag: app    
+    
+    
+    
+  elasticsearch:
+    build:
+      context: ./EFKStack/elasticsearch/
+      args:
+        ELK_VERSION: 7.5.0
+    container_name: elasticsearch    
+    volumes:
+      - type: bind
+        source: ./EFKStack/elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        read_only: true
+      - type: volume
+        source: elasticsearch
+        target: /usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    restart: unless-stopped 
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ELASTIC_PASSWORD: changeme
+      # Use single node discovery in order to disable production mode and avoid bootstrap checks
+      # see https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
+      discovery.type: single-node
+    networks:
+      - elk
+
+  fluentd:
+    build: ./EFKStack/fluentd
+    container_name: fluentd
+    restart: always
+    volumes:
+      - ./EFKStack/fluentd/:/fluentd/etc
+    ports:
+      - "24224:24224"
+    restart: unless-stopped 
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk
+
+  kibana:
+    build:
+      context: ./EFKStack/kibana/
+      args:
+        ELK_VERSION: 7.5.0
+    container_name: kibana 
+    volumes:
+      - type: bind
+        source: ./EFKStack/kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+    ports:
+      - "5601:5601"
+    restart: unless-stopped 
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+      
+      
+      
+
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  elasticsearch:
